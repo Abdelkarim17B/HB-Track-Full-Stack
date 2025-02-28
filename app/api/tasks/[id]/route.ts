@@ -111,9 +111,10 @@ export async function PATCH(
         createdAt: new Date()
       };
       
+      // Fix: Using the correct $push operator format
       await db.collection("tasks").updateOne(
         { _id: new ObjectId(id) },
-        { $push: { comments: newComment } }
+        { $push: { comments: newComment } as any }
       );
     }
     
