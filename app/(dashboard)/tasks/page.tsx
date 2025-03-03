@@ -308,7 +308,7 @@ export default function TasksPage() {
         )}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[250px_1fr]">
+      <div className="grid gap-6 md:grid-cols-[330px_1fr]">
         <div className="space-y-6">
           <Card>
             <CardHeader>

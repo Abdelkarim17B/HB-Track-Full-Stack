@@ -8,10 +8,16 @@ dns.setServers([
   '8.8.4.4'
 ]);
 
+
+
 async function seedDatabase() {
   // Use environment variable or fallback to hardcoded value
-  const MONGODB_URI = process.env.MONGODB_URI || 
-    "mongodb+srv://labengherbia:JoqikZC3334Bx3Jr@cluster0.5hdvo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+  // Declare the password separately
+
+// Use environment variable or fallback to hardcoded value for static export
+const password = 'LlnNytZ7Idoy4Aeu';
+
+const MONGODB_URI = `mongodb+srv://labengherbia:${password}@cluster0.hnu75.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
   console.log('Connecting to MongoDB...');
   
