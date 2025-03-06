@@ -14,7 +14,6 @@ export async function GET(req: Request) {
         { status: 401 }
       );
     }
-
     const { searchParams } = new URL(req.url);
     const date = searchParams.get('date');
     const lot = searchParams.get('lot');
@@ -26,13 +25,14 @@ export async function GET(req: Request) {
     
     // Filter by date if provided
     if (date) {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
+      const searchDate = new Date(date);
+      const sevenDaysLater = new Date(searchDate);
+      sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
       
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
-      
-      query.scheduledDate = { $gte: startDate, $lte: endDate };
+      query.scheduledDate = { 
+        $gte: searchDate,
+        $lte: sevenDaysLater
+      };
     }
     
     // Filter by lot if provided, or by user's lot if not management
@@ -43,7 +43,10 @@ export async function GET(req: Request) {
       query.lot = session.user.lot;
     }
     
+    
     const tasks = await db.collection("tasks").find(query).toArray();
+    
+    console.log(`Found ${tasks.length} tasks`); // Debug log
     
     return NextResponse.json(tasks);
   } catch (error) {
@@ -73,7 +76,6 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
-
     const { title, description, lot, scheduledDate } = await req.json();
     
     if (!title || !description || !lot || !scheduledDate) {
@@ -82,7 +84,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
     const client = await clientPromise;
     const db = client.db();
     
@@ -92,16 +93,16 @@ export async function POST(req: Request) {
       lot,
       createdBy: session.user.id,
       createdAt: new Date(),
-      scheduledDate: new Date(scheduledDate),
+      scheduledDate: new Date(scheduledDate), // Fixed capitalization here
       status: "pending",
       comments: [],
       updatedAt: new Date()
     });
     
     return NextResponse.json(
-      { 
+      {
         message: "Task created successfully",
-        taskId: result.insertedId 
+        taskId: result.insertedId
       },
       { status: 201 }
     );

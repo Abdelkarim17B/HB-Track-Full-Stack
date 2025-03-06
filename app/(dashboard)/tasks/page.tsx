@@ -16,7 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Task, Lot } from "@/lib/models/types";
-import { CheckCircle, XCircle, Clock, Plus, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Plus, Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import CameraUpload from "@/components/CameraUpload";
 
 export default function TasksPage() {
   const { data: session } = useSession();
@@ -27,6 +29,7 @@ export default function TasksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // New task form state
   const [newTask, setNewTask] = useState({
@@ -43,6 +46,10 @@ export default function TasksPage() {
     comment: "",
     photoUrl: ""
   });
+  
+  // Task delete state
+  const [deleteTaskId, setDeleteTaskId] = useState<string>("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 
@@ -192,6 +199,42 @@ export default function TasksPage() {
     }
   };
 
+  const handleDeleteTask = async () => {
+    if (!deleteTaskId) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const response = await fetch(`/api/tasks/${deleteTaskId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Échec de la suppression de la tâche");
+      }
+
+      toast.success("Tâche supprimée avec succès");
+      
+      // Reset and close dialog
+      setDeleteTaskId("");
+      setDeleteDialogOpen(false);
+      
+      // Refresh tasks
+      const dateParam = format(selectedDate, "yyyy-MM-dd");
+      const lotParam = selectedLot ? `&lot=${selectedLot}` : "";
+      const tasksResponse = await fetch(`/api/tasks?date=${dateParam}${lotParam}`);
+      
+      if (tasksResponse.ok) {
+        const data = await tasksResponse.json();
+        setTasks(data);
+      }
+    } catch (error) {
+      toast.error("Une erreur est survenue lors de la suppression de la tâche");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const openUpdateDialog = (task: Task) => {
     setTaskUpdate({
       taskId: task._id || "",
@@ -200,6 +243,11 @@ export default function TasksPage() {
       photoUrl: ""
     });
     setUpdateDialogOpen(true);
+  };
+  
+  const openDeleteDialog = (taskId: string) => {
+    setDeleteTaskId(taskId);
+    setDeleteDialogOpen(true);
   };
 
   const getStatusIcon = (status: string) => {
@@ -433,13 +481,25 @@ export default function TasksPage() {
                           </div>
                         )}
                       </CardContent>
-                      <CardFooter>
-                        {(task.status === "pending" || isManagement) && (
+                      <CardFooter className="flex justify-between">
+                        <div>
+                          {(task.status === "pending" || isManagement) && (
+                            <Button 
+                              variant="outline" 
+                              onClick={() => openUpdateDialog(task)}
+                            >
+                              Mettre à jour
+                            </Button>
+                          )}
+                        </div>
+                        {isManagement && (
                           <Button 
                             variant="outline" 
-                            onClick={() => openUpdateDialog(task)}
+                            size="icon"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => openDeleteDialog(task._id || "")}
                           >
-                            Mettre à jour
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </CardFooter>
@@ -457,65 +517,96 @@ export default function TasksPage() {
       </div>
 
       <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mettre à jour la tâche</DialogTitle>
-            <DialogDescription>
-              Mettez à jour le statut de la tâche et ajoutez un commentaire si nécessaire.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdateTask}>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="status">Statut</Label>
-                <Select
-                  value={taskUpdate.status}
-                  onValueChange={(value) => setTaskUpdate({ ...taskUpdate, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un statut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="done">Terminé</SelectItem>
-                    <SelectItem value="not_done">Non fait</SelectItem>
-                    {isManagement && <SelectItem value="pending">En attente</SelectItem>}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="comment">Commentaire</Label>
-                <Textarea
-                  id="comment"
-                  value={taskUpdate.comment}
-                  onChange={(e) => setTaskUpdate({ ...taskUpdate, comment: e.target.value })}
-                  placeholder="Ajoutez un commentaire (obligatoire si 'Non fait')"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="photoUrl">URL de la photo (optionnel)</Label>
-                <Input
-                  id="photoUrl"
-                  value={taskUpdate.photoUrl}
-                  onChange={(e) => setTaskUpdate({ ...taskUpdate, photoUrl: e.target.value })}
-                  placeholder="https://example.com/photo.jpg"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Mise à jour...
-                  </>
-                ) : (
-                  "Mettre à jour"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Mettre à jour la tâche</DialogTitle>
+      <DialogDescription>
+        Mettez à jour le statut de la tâche et ajoutez un commentaire si nécessaire.
+      </DialogDescription>
+    </DialogHeader>
+    <form onSubmit={handleUpdateTask}>
+      <div className="grid gap-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="status">Statut</Label>
+          <Select
+            value={taskUpdate.status}
+            onValueChange={(value) => setTaskUpdate({ ...taskUpdate, status: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner un statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="done">Terminé</SelectItem>
+              <SelectItem value="not_done">Non fait</SelectItem>
+              {isManagement && <SelectItem value="pending">En attente</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="comment">Commentaire</Label>
+          <Textarea
+            id="comment"
+            value={taskUpdate.comment}
+            onChange={(e) => setTaskUpdate({ ...taskUpdate, comment: e.target.value })}
+            placeholder="Ajoutez un commentaire (obligatoire si 'Non fait')"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="photoUrl">Photo</Label>
+          {/* Remplacer l'input text par le composant CameraUpload */}
+          <CameraUpload
+            onPhotoUrlChange={(url) => setTaskUpdate({ ...taskUpdate, photoUrl: url })}
+            initialUrl={taskUpdate.photoUrl}
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="submit" disabled={isUpdating}>
+          {isUpdating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Mise à jour...
+            </>
+          ) : (
+            "Mettre à jour"
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirmer la suppression
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette tâche? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteTask}
+              className="bg-red-500 hover:bg-red-600"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                "Supprimer"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

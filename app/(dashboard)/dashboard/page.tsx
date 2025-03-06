@@ -26,7 +26,10 @@ export default function Dashboard() {
         
         if (response.ok) {
           const data = await response.json();
+          console.log("Tasks fetched:", data); // Debug log
           setTasks(data);
+        } else {
+          console.error("API response not OK:", response.status);
         }
       } catch (error) {
         console.error("Failed to fetch tasks:", error);
@@ -42,21 +45,33 @@ export default function Dashboard() {
 
   // Filter tasks based on selected tab
   const getFilteredTasks = () => {
+    if (!tasks || tasks.length === 0) {
+      console.log("No tasks available to filter"); // Debug log
+      return [];
+    }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    let filtered = [];
     switch (selectedTab) {
       case "today":
-        return tasks.filter(task => {
+        filtered = tasks.filter(task => {
           const taskDate = new Date(task.scheduledDate);
           taskDate.setHours(0, 0, 0, 0);
-          return taskDate.getTime() === today.getTime();
+          const matches = taskDate.getTime() === today.getTime();
+          return matches;
         });
+        break;
       case "week":
-        return tasks;
+        filtered = tasks;
+        break;
       default:
-        return tasks;
+        filtered = tasks;
     }
+    
+    console.log(`Filtered tasks for ${selectedTab}:`, filtered.length); // Debug log
+    return filtered;
   };
 
   // Prepare data for charts
@@ -68,7 +83,9 @@ export default function Dashboard() {
     };
     
     filteredTasks.forEach(task => {
-      statusCounts[task.status]++;
+      if (task.status in statusCounts) {
+        statusCounts[task.status]++;
+      }
     });
     
     return [
@@ -82,7 +99,9 @@ export default function Dashboard() {
     const lotCounts: Record<string, number> = {};
     
     filteredTasks.forEach(task => {
-      lotCounts[task.lot] = (lotCounts[task.lot] || 0) + 1;
+      if (task.lot) {
+        lotCounts[task.lot] = (lotCounts[task.lot] || 0) + 1;
+      }
     });
     
     return Object.entries(lotCounts).map(([lot, count]) => ({
@@ -108,9 +127,16 @@ export default function Dashboard() {
     
     // Fill in the data
     tasks.forEach(task => {
+      if (!task.scheduledDate) {
+        console.warn("Task missing scheduledDate:", task);
+        return;
+      }
+
       const taskDate = format(new Date(task.scheduledDate), "yyyy-MM-dd");
       if (dailyData[taskDate]) {
-        dailyData[taskDate][task.status]++;
+        if (task.status && dailyData[taskDate][task.status] !== undefined) {
+          dailyData[taskDate][task.status]++;
+        }
       }
     });
     
@@ -246,9 +272,9 @@ export default function Dashboard() {
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="pending" name="En attente" stackId="a" fill="hsl(var(--chart-1))" />
-                    <Bar dataKey="done" name="Terminé" stackId="a" fill="hsl(var(--chart-2))" />
-                    <Bar dataKey="not_done" name="Non fait" stackId="a" fill="hsl(var(--chart-3))" />
+                    <Bar dataKey="pending" name="En attente" stackId="a" fill={COLORS[0]} />
+                    <Bar dataKey="done" name="Terminé" stackId="a" fill={COLORS[1]} />
+                    <Bar dataKey="not_done" name="Non fait" stackId="a" fill={COLORS[2]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -299,7 +325,7 @@ export default function Dashboard() {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="tasks" fill="hsl(var(--chart-1))" />
+                      <Bar dataKey="tasks" fill={COLORS[0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
