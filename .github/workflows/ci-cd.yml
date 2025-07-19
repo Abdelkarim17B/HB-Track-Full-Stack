@@ -49,15 +49,15 @@ jobs:
         env:
           NODE_ENV: test
 
-  # End-to-End Tests
-
-
   # Docker Build
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: [test]
     if: github.event_name == 'push'
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
     
     steps:
       - name: Checkout repository
@@ -85,6 +85,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -94,6 +95,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Wait for image availability
+        run: |
+          echo "Waiting for image to be available in registry..."
+          sleep 30
+          # Verify image exists
+          docker manifest inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
   # Security Scan
   security:
@@ -106,18 +114,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           format: 'sarif'
           output: 'trivy-results.sarif'
+          exit-code: '0'  # Don't fail the job on vulnerabilities
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy for Pull Request comments
+        uses: aquasecurity/trivy-action@master
+        if: github.event_name == 'pull_request'
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          format: 'table'
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
   # Deploy to Production
   deploy-production:
@@ -133,6 +162,8 @@ jobs:
       - name: Deploy to production
         run: |
           echo "Deploying to production environment..."
+          echo "Image: ${{ needs.docker-build.outputs.image }}"
+          echo "Digest: ${{ needs.docker-build.outputs.digest }}"
           echo "Production URL: https://hbtrack.example.com"
           # Add your production deployment commands here
           # Example: kubectl apply -f k8s/production/
