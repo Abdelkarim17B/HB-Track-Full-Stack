@@ -10,7 +10,6 @@
     "seed": "node scripts/seed.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    // ...existing code...
     "test:selenium": "node tests/selenium/hbtrack-selenium-tests.js",
     "test:selenium:headless": "HEADLESS=true node tests/selenium/hbtrack-selenium-tests.js",
     "docker:build": "docker build -t hbtrack .",
@@ -82,7 +81,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    // ...existing code...
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.4.6",
     "@testing-library/react": "^16.3.0",
