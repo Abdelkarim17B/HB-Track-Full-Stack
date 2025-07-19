@@ -113,21 +113,6 @@ jobs:
           echo "Checking image: $IMAGE_FULL"
           docker manifest inspect "$IMAGE_FULL"
 
-  setup-codeql:
-    name: Setup CodeQL
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
   # Security Scan
   security:
     name: Security Scan
