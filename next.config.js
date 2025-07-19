@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['mongodb'],
-  },
+  serverExternalPackages: ['mongodb'],
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,7 +9,6 @@ const nextConfig = {
     unoptimized: false,
   },
   output: 'standalone',
-  swcMinify: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

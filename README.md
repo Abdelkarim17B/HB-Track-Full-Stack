@@ -66,7 +66,7 @@ NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=super-secret-key-here
 
 # Database
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/hbtrack?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://...
 
 # Cloudinary (optionnel pour upload d'images)
 CLOUDINARY_CLOUD_NAME=cloud-name
@@ -113,6 +113,7 @@ npm run docker:run
 npm run docker:dev
 ```
 
+
 ### 🧪 Tests
 
 #### Tests Unitaires
@@ -123,16 +124,6 @@ npm run test
 
 # Mode watch
 npm run test:watch
-```
-
-#### Tests End-to-End (Playwright)
-
-```bash
-# Lancer les tests E2E
-npm run test:e2e
-
-# Interface graphique
-npm run test:e2e:ui
 ```
 
 #### Tests Selenium
@@ -148,7 +139,6 @@ npm run test:selenium:headless
 #### Script de Tests Complet
 
 ```bash
-# Lancer tous les types de tests
 ./scripts/run-tests.sh
 
 # Ignorer le build
@@ -209,7 +199,6 @@ HB-track-nextjs/
 ├── scripts/                  # Scripts utilitaires
 ├── tests/                    # Tests
 │   ├── __tests__/           # Tests unitaires
-│   └── e2e/                 # Tests E2E
 ├── docker/                   # Configuration Docker
 ├── .github/                  # CI/CD GitHub Actions
 └── docs/                     # Documentation
@@ -219,7 +208,7 @@ HB-track-nextjs/
 
 Le projet inclut une pipeline CI/CD complète avec GitHub Actions :
 
-- **Tests automatisés** (unitaires + E2E)
+- **Tests automatisés** (unitaires + fonctionnels)
 - **Build et validation** du code
 - **Construction d'images Docker**
 - **Déploiement automatique**
