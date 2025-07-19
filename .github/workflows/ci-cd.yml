@@ -113,6 +113,21 @@ jobs:
           echo "Checking image: $IMAGE_FULL"
           docker manifest inspect "$IMAGE_FULL"
 
+  setup-codeql:
+    name: Setup CodeQL
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
   # Security Scan
   security:
     name: Security Scan
@@ -135,18 +150,62 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ needs.docker-build.outputs.image-name }}:latest
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          exit-code: '0'  # Don't fail the job on vulnerabilities
+          format: 'table'
+          exit-code: '0' 
         env:
           TRIVY_USERNAME: ${{ github.actor }}
           TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Run Trivy vulnerability scanner (JSON output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ needs.docker-build.outputs.image-name }}:latest
+          format: 'json'
+          output: 'trivy-results.json'
+          exit-code: '0'
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Trivy scan results as artifact
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
+          name: trivy-scan-results
+          path: trivy-results.json
+          retention-days: 30
+
+      - name: Parse and comment on vulnerabilities (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          # Parse JSON results and create a summary
+          if [ -f "trivy-results.json" ]; then
+            CRITICAL=$(jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL") | .VulnerabilityID' trivy-results.json 2>/dev/null | wc -l)
+            HIGH=$(jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH") | .VulnerabilityID' trivy-results.json 2>/dev/null | wc -l)
+            MEDIUM=$(jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "MEDIUM") | .VulnerabilityID' trivy-results.json 2>/dev/null | wc -l)
+            
+            echo "## 🔍 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| High     | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium   | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📁 Detailed results are available in the job artifacts." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check for critical vulnerabilities
+        run: |
+          if [ -f "trivy-results.json" ]; then
+            CRITICAL_COUNT=$(jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL") | .VulnerabilityID' trivy-results.json 2>/dev/null | wc -l)
+            if [ "$CRITICAL_COUNT" -gt 0 ]; then
+              echo "❌ Found $CRITICAL_COUNT critical vulnerabilities!"
+              echo "::warning::Found $CRITICAL_COUNT critical vulnerabilities in the container image"
+            else
+              echo "✅ No critical vulnerabilities found"
+            fi
+          fi
 
       - name: Run Trivy for Pull Request comments
         uses: aquasecurity/trivy-action@master
@@ -154,6 +213,7 @@ jobs:
         with:
           image-ref: ${{ env.REGISTRY }}/${{ needs.docker-build.outputs.image-name }}:latest
           format: 'table'
+          exit-code: '0'
         env:
           TRIVY_USERNAME: ${{ github.actor }}
           TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
