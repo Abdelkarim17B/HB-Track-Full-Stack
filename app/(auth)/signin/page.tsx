@@ -100,7 +100,7 @@ export default function SignIn() {
         <p className="text-sm text-muted-foreground">
           Pas encore de compte?{" "}
           <Link href="/register" className="text-primary hover:underline">
-            S'inscrire
+            Sinscrire
           </Link>
         </p>
       </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Camera, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface CameraUploadProps {
   onPhotoUrlChange: (url: string) => void;
@@ -87,16 +88,13 @@ export default function CameraUpload({ onPhotoUrlChange, initialUrl = "" }: Came
     }
   };
 
-  // Upload image to server/storage
   const uploadImage = async (file: Blob) => {
     setIsUploading(true);
     
     try {
-      // Create FormData for upload
       const formData = new FormData();
       formData.append('file', file);
       
-      // Send to your API endpoint for upload
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -219,15 +217,15 @@ export default function CameraUpload({ onPhotoUrlChange, initialUrl = "" }: Came
       {photoUrl && !isUploading && (
         <div className="mt-2">
           <p className="text-sm font-medium mb-1">Prévisualisation :</p>
-          <div className="relative bg-muted rounded-md overflow-hidden border border-border">
-            <img 
+            <Image 
               src={photoUrl} 
-              alt="Photo" 
+              alt="Aperçu du fichier uploadé" 
+              width={500}
+              height={256}
               className="w-full h-auto max-h-64 object-contain"
               onError={() => toast.error("Impossible de charger l'image")}
             />
           </div>
-        </div>
       )}
     </div>
   );

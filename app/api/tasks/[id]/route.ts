@@ -6,8 +6,10 @@ import { ObjectId } from "mongodb";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params;
+  
   try {
     const session = await getServerSession(authOptions);
     
@@ -18,7 +20,7 @@ export async function GET(
       );
     }
 
-    const id = params.id;
+    const id = resolvedParams.id;
     
     const client = await clientPromise;
     const db = client.db();
@@ -55,8 +57,10 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params;
+  
   try {
     const session = await getServerSession(authOptions);
     
@@ -67,7 +71,7 @@ export async function PATCH(
       );
     }
 
-    const id = params.id;
+    const id = resolvedParams.id;
     const { status, comment, photoUrl } = await req.json();
     
     const client = await clientPromise;
@@ -138,8 +142,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params;
+  
   try {
     const session = await getServerSession(authOptions);
     
@@ -158,7 +164,7 @@ export async function DELETE(
       );
     }
 
-    const id = params.id;
+    const id = resolvedParams.id;
     
     const client = await clientPromise;
     const db = client.db();

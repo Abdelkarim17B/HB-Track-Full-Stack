@@ -1,11 +1,41 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Comment out the static export for development to allow API routes to work
-  // output: 'export',
+  experimental: {
+    serverComponentsExternalPackages: ['mongodb'],
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  images: { unoptimized: true },
-};
+  images: {
+    domains: ['res.cloudinary.com'],
+    unoptimized: false,
+  },
+  output: 'standalone',
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+    ]
+  },
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig
