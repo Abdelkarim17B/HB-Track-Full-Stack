@@ -12,11 +12,13 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
-
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Ensure public directory exists before and after build
+RUN mkdir -p public
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
@@ -32,6 +34,9 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
+# Ensure public directory still exists after build
+RUN mkdir -p public && ls -la public
+
 FROM base AS runner
 WORKDIR /app
 
@@ -41,6 +46,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Create public directory and copy contents
+RUN mkdir -p ./public
 COPY --from=builder /app/public ./public
 
 RUN mkdir .next
