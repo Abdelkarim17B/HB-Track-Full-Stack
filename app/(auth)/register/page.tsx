@@ -58,7 +58,6 @@ export default function Register() {
   }, []);
 
   useEffect(() => {
-    // If role is management, set lot to TCE
     if (["ingenieur", "chef_chantier", "conducteur"].includes(selectedRole)) {
       setValue("lot", "TCE");
     }

@@ -63,15 +63,15 @@ Créer un fichier `.env.local` à la racine du projet :
 ```env
 # Authentication
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-super-secret-key-here
+NEXTAUTH_SECRET=super-secret-key-here
 
 # Database
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/hbtrack?retryWrites=true&w=majority
 
 # Cloudinary (optionnel pour upload d'images)
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
+CLOUDINARY_CLOUD_NAME=cloud-name
+CLOUDINARY_API_KEY=api-key
+CLOUDINARY_API_SECRET=api-secret
 ```
 
 ### 4. Initialisation de la Base de Données
