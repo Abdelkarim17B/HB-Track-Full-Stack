@@ -1,4 +1,4 @@
-name: 🚀 CI/CD Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -12,9 +12,9 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # 🧪 Quality Assurance
+  # Quality Assurance
   test:
-    name: 🧪 Tests & Quality
+    name: Tests & Quality
     runs-on: ubuntu-latest
     
     strategy:
@@ -22,63 +22,63 @@ jobs:
         node-version: [22.12.0]
     
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: 📦 Install dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
-      - name: 🔍 Run ESLint
+      - name: Run ESLint
         run: npm run lint
 
-      - name: 🏗️ Build application
+      - name: Build application
         run: npm run build
         env:
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret
           MONGODB_URI: mongodb://localhost:27017/hbtrack-test
 
-      - name: 🧪 Run unit tests
+      - name: Run unit tests
         run: npm run test
         env:
           NODE_ENV: test
 
-  # 🎭 End-to-End Tests
+  # End-to-End Tests
   e2e-tests:
-    name: 🎭 E2E Tests
+    name: E2E Tests
     runs-on: ubuntu-latest
     needs: test
     
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: 📦 Install dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
-      - name: 📦 Install Playwright
+      - name: Install Playwright
         run: npx playwright install --with-deps
 
-      - name: 🚀 Start MongoDB
+      - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.10.0
         with:
           mongodb-version: '7.0'
           mongodb-replica-set: test-rs
           mongodb-port: 27017
 
-      - name: 🏗️ Build and start app
+      - name: Build and start app
         run: |
           npm run build
           npm start &
@@ -88,19 +88,19 @@ jobs:
           NEXTAUTH_SECRET: test-secret-key-for-e2e
           MONGODB_URI: mongodb://localhost:27017/hbtrack-test
 
-      - name: 🎭 Run Playwright tests
+      - name: Run Playwright tests
         run: npm run test:e2e
         env:
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret-key-for-e2e
           MONGODB_URI: mongodb://localhost:27017/hbtrack-test
 
-      - name: 🦊 Install Firefox for Selenium
+      - name: Install Firefox for Selenium
         run: |
           sudo apt-get update
           sudo apt-get install -y firefox
 
-      - name: 🧪 Run Selenium tests
+      - name: Run Selenium tests
         run: npm run test:selenium:headless
         env:
           NEXTAUTH_URL: http://localhost:3000
@@ -108,7 +108,7 @@ jobs:
           MONGODB_URI: mongodb://localhost:27017/hbtrack-test
           HEADLESS: true
 
-      - name: 📊 Upload test results
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -116,28 +116,28 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-  # 🐳 Docker Build
+  # Docker Build
   docker-build:
-    name: 🐳 Docker Build
+    name: Docker Build
     runs-on: ubuntu-latest
     needs: [test, e2e-tests]
     if: github.event_name == 'push'
     
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔑 Login to Container Registry
+      - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📝 Extract metadata
+      - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -148,7 +148,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: 🏗️ Build and push Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -159,64 +159,64 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # 🔐 Security Scan
+  # Security Scan
   security:
-    name: 🔐 Security Scan
+    name: Security Scan
     runs-on: ubuntu-latest
     needs: docker-build
     if: github.event_name == 'push'
     
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔍 Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           format: 'sarif'
           output: 'trivy-results.sarif'
 
-      - name: 📊 Upload Trivy scan results
+      - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
 
-  # 🌟 Deploy to Production
+  # Deploy to Production
   deploy-production:
-    name: 🌟 Deploy to Production
+    name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [docker-build, security]
     if: github.ref == 'refs/heads/main'
     environment: production
     
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🌟 Deploy to production
+      - name: Deploy to production
         run: |
-          echo "🌟 Deploying to production environment..."
-          echo "🔗 Production URL: https://hbtrack.example.com"
+          echo "Deploying to production environment..."
+          echo "Production URL: https://hbtrack.example.com"
           # Add your production deployment commands here
           # Example: kubectl apply -f k8s/production/
           # Example: docker-compose -f docker-compose.prod.yml up -d
 
-  # 📊 Notification
+  # Notification
   notify:
-    name: 📊 Notification
+    name: Notification
     runs-on: ubuntu-latest
     needs: [deploy-production]
     if: always()
     
     steps:
-      - name: 📊 Send notification
+      - name: Send notification
         run: |
           if [ "${{ needs.deploy-production.result }}" == "success" ]; then
-            echo "✅ Production deployment successful!"
+            echo "Production deployment successful!"
           elif [ "${{ needs.deploy-staging.result }}" == "success" ]; then
-            echo "✅ Staging deployment successful!"
+            echo "Staging deployment successful!"
           else
-            echo "❌ Deployment failed or skipped"
+            echo "Deployment failed or skipped"
           fi
